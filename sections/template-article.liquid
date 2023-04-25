@@ -1,4 +1,4 @@
-<article class="py-8">
+<article class="py-8" itemscope itemtype="http://schema.org/BlogPosting">
     {% for block in section.blocks %}
         {% case block.type %}
             {% when 'article_title' %}
@@ -7,16 +7,16 @@
                         <a href="{{ blog.url }}" class="text-base uppercase text-gray-500 hover:text-gray-900 font-bold">
                             {{ blog.title }}
                         </a>
-                        <h1 class="text-4xl md:text-6xl font-medium">
+                        <h1 class="text-4xl md:text-6xl font-medium" itemprop="headline">
                             {{ article.title }}
                         </h1>
                     </div>
                 </div>
             {% when 'article_author' %}
                 <div class="flex items-center justify-center">
-                    <div class="max-w-7xl text-center">
+                    <div class="max-w-7xl text-center" itemscope itemtype="http://shcema.org/Person">
                         {% if section.settings.enable_author %}
-                            <small>{{ article.author }}</small>
+                            <small itemprop="author">{{ article.author }}</small>
                         {% endif %}
                     </div>
                 </div>
@@ -24,14 +24,14 @@
                 <div class="flex items-center justify-center">
                     <div class="max-w-7xl text-center">
                         {% if section.settings.enable_published_date %}
-                            <time datetime="{{ article.published_at | date: '%Y-%m-%d' }}">
+                            <time itemprop="datePublished dateCreated" datetime="{{ article.published_at | date: '%Y-%m-%d' }}">
                                 {{ article.published_at | date: format: 'on_date' }}
                             </time>    
                         {% endif %}
                     </div>
                 </div>
             {% when 'featured_image' %}
-                <div class="max-w-7xl bg-blue-100 rounded-lg mx-2 md:mx-auto overflow-hidden my-4">
+                <div itemprop="image" class="max-w-7xl bg-blue-100 rounded-lg mx-2 md:mx-auto overflow-hidden my-4">
                     {% if article.image != blank %}
                         <img class="w-full h-80 md:h96 object-cover object-center" src="{{ article.image | img_url: 'large' }}" alt="{{ article.image.alt }}">  
                     {% else %}
@@ -41,7 +41,7 @@
                 </div>
             {% when 'article_content' %}
                 <div class="flex items-center justify-center">
-                    <div class="max-w-4xl sm:mx-2">
+                    <div itemprop="articleBody" class="max-w-4xl sm:mx-2">
                         {{ article.content }}
                     </div>
                 </div>
@@ -53,13 +53,32 @@
 {% if blog.comments_enabled? %}
     <div id="comments" class="my-8">
         {% if article.comments_count > 0 %}
+            {% paginate article.comments by 5 %}
+                {% for comment in article.comments %}
+                    <div class="flex-1 border my-4 px-4 py-2 sm:px-6 sm:py-2 leading-relaxed">
+                        <span class="comment-author">
+                            {{ comment.author }}
+                        </span>
+                        <span class="text-xs text-gray-400">
+                            {{ comment.created_at | date: format: 'default'}}
+                        </span>
+                        <p class="text-sm">
+                            {{ comment.content }}
+                        </p>
+                    </div>
+                {% endfor %}
+
+                <div class="max-w-6xl mx-auto">
+                    {% render 'pagination', pagination: paginate %}
+                </div>
+            {% endpaginate %}
         {% else %}
             There are no comments in this article
         {% endif %}
     </div>
 {% endif %}
 
-<div id="commments_form" class="mb-8">
+<div id="commment_form" class="mb-8">
     {% form 'new_comment', article %}
         <div class="flex-1 mx-auto items-center justify-center max-w-4xl px-4">
             <div class="px1 md:flex mb-3">
@@ -96,7 +115,7 @@
                         Comment
                     </label>
                     <textarea 
-                        name="comment[content]" 
+                        name="comment[body]" 
                         id="comment_content" 
                         class="w-full text-gray-700 resize-none h-20 py-2 px-2 focus:outline-none border"
                     ></textarea>
@@ -114,6 +133,33 @@
         </div>
     {% endform %}
 </div>
+
+<script type="application/ld+json">
+    {
+        "@context": "http://shcema.org/",
+        "@type": "BlogPosting",
+        "headline": {{ article.title | json }},
+        "articleBody": {{ article.content | strip_html | json }},
+        {% if article.excerpt != blank %}
+            "description": {{ article.excerpt | strip_html | json }},
+        {% endif %}
+        {% if article.image %}
+            "image": [
+                {{ article.image | img_url: "medium" | prepend: 'https:' | json }}
+            ],
+        {% endif %}
+        "datePublished": {{ article.published_at | date: format: "default" | json }},
+        "dateCreated": {{ article.created_at | date: format: "default" | json }},
+        "author": {
+            "@type": "Person",
+            "name": {{ article.author | json }}
+        },
+        "publisher": {
+            "@type": "Organization",
+            "name": {{ shop.name | json }}
+        }
+    }
+</script>
 
 {% schema %}
     {
